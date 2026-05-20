@@ -1,0 +1,76 @@
+/* Pokemon Emerald font */
+@font-face {
+  font-family: 'Pokemon Emerald';
+  src: url('/pokemon-roulette/pokemon-emerald.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    color: #fff;
+    min-height: 100vh;
+    font-family: 'Pokemon Emerald', 'Press Start 2P', monospace;
+    image-rendering: pixelated;
+    /* Pink/magenta scanline stripes — GBA Pokedex backdrop */
+    background: repeating-linear-gradient(to bottom,
+        #7ea576 0px, #7ea576 4px,
+        #467040 4px, #467040 8px);
+  }
+}
+
+@layer utilities {
+  .font-pixel {
+    text-shadow: 2px 2px 0 rgba(60, 60, 60, 0.65);
+  }
+
+  .slot-clip {
+    overflow: hidden;
+    position: relative;
+  }
+
+  .pixel-border {
+    image-rendering: pixelated;
+  }
+
+  .screen-overlay::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.08) 2px,
+        rgba(0, 0, 0, 0.08) 4px);
+    pointer-events: none;
+    z-index: 10;
+  }
+}
+
+img.sprite {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1a2e;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CC0000;
+  border-radius: 3px;
+}
