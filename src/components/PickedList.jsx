@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import PokeballIcon from './PokeballIcon'
 
 /* ── Palette (matches SpinSlot Pokedex theme) ──────────────────────────── */
 const C_FRAME_PINK = '#d04888'
@@ -10,20 +11,6 @@ const C_LIST_CREAM = '#e0b828'
 const C_YELLOW_HI = '#f8e030'
 const C_RED = '#CC0000'
 const C_BORDER = '#000'
-
-function PokeballIcon({ size = 12 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 10 10"
-      style={{ imageRendering: 'pixelated', flexShrink: 0, display: 'block' }}>
-      <rect x="0" y="0" width="10" height="10" fill="#111" />
-      <rect x="1" y="1" width="8" height="3" fill="#CC0000" />
-      <rect x="1" y="6" width="8" height="3" fill="#eee" />
-      <rect x="1" y="4" width="8" height="2" fill="#111" />
-      <rect x="3" y="4" width="4" height="2" fill="#fff" />
-      <rect x="4" y="4" width="2" height="2" fill="#ccc" />
-    </svg>
-  )
-}
 
 export default function PickedList({ picks, onRemove, onReset, loadingPicks }) {
   const [filter, setFilter] = useState('all')
@@ -112,7 +99,7 @@ export default function PickedList({ picks, onRemove, onReset, loadingPicks }) {
         )}
       </div>
 
-      {/* List — cream background to match Pokedex right pane */}
+      {/* List — golden background to match Pokedex right pane */}
       <div className="flex-1 overflow-y-auto min-h-0 p-2"
         style={{
           gap: 4, display: 'flex', flexDirection: 'column',
@@ -148,8 +135,8 @@ function PickRow({ pick, onRemove }) {
         boxShadow: `inset 0 0 0 1px ${C_FRAME_PINK_HI}`,
       }}>
 
-      {/* Pokéball icon */}
-      <PokeballIcon size={12} />
+      {/* Pokeball icon — everything picked is owned */}
+      <PokeballIcon size={14} />
 
       {/* Sprite */}
       <div className="flex-shrink-0 flex items-center justify-center"

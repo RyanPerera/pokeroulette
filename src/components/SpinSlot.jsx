@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import PokeballIcon from './PokeballIcon'
+import pokeballSil from '../assets/pokeballsil.png'
 
 const EASE_OUT = t => 1 - Math.pow(1 - t, 4)
 const SPIN_COUNT = 500
-const SPIN_MS = 4000
 const HALF_WIN = 40
 
 /* ── GBA Pokemon Emerald Pokedex palette ──────────────────────────────── */
@@ -29,21 +30,40 @@ const mkFade = (dir, col) => `linear-gradient(to ${dir},
   ${col}22 52px, ${col}22 62px,
   transparent 62px)`
 
-const FADE_TOP_WHITE = mkFade('bottom', '#f8f8f8')
-const FADE_BOT_WHITE = mkFade('top', '#f8f8f8')
-/* Grey pixelated wheel-rim gradient — fades over the gold list */
+/* Grey pixelated wheel-rim gradient — fades over the sprite scroller */
 const FADE_TOP_GREY = mkFade('bottom', '#4a4a4a')
 const FADE_BOT_GREY = mkFade('top', '#4a4a4a')
 
+/* Pixel staircase rounded corners (clip-path). `s` = step size in px,
+   corner depth is 4*s — the classic GBA window corner. */
+const pixelRound = (s) => {
+  const a = `${s}px`, b = `${s * 2}px`, c = `${s * 4}px`
+  return `polygon(
+    0 ${c}, ${a} ${c}, ${a} ${b}, ${b} ${b}, ${b} ${a}, ${c} ${a}, ${c} 0,
+    calc(100% - ${c}) 0, calc(100% - ${c}) ${a}, calc(100% - ${b}) ${a},
+    calc(100% - ${b}) ${b}, calc(100% - ${a}) ${b}, calc(100% - ${a}) ${c}, 100% ${c},
+    100% calc(100% - ${c}), calc(100% - ${a}) calc(100% - ${c}),
+    calc(100% - ${a}) calc(100% - ${b}), calc(100% - ${b}) calc(100% - ${b}),
+    calc(100% - ${b}) calc(100% - ${a}), calc(100% - ${c}) calc(100% - ${a}),
+    calc(100% - ${c}) 100%,
+    ${c} 100%, ${c} calc(100% - ${a}), ${b} calc(100% - ${a}),
+    ${b} calc(100% - ${b}), ${a} calc(100% - ${b}), ${a} calc(100% - ${c}),
+    0 calc(100% - ${c})
+  )`
+}
+
 export default function SpinSlot({
-  pool, onPick, disabled,
+  entries = [],             /* full dex — everything browseable           */
+  pool = [],                /* not-yet-owned — what the roulette draws on */
+  onPick, disabled,
   category, onCategoryChange,
-  pickedCount, totalCount,
-  seenHoenn, seenNational, ownHoenn, ownNational,
+  seenStats = { pokemon: 0, trainers: 0, both: 0 },
+  ownStats = { pokemon: 0, trainers: 0, both: 0 },
   pickedIds,
   onSignOut, onShowPicks,
   spinMs = 4000,            /* spin duration in ms (overridable from settings) */
   onOpenSettings,           /* () => void — called when the user hits MENU */
+  initialIndex = 0,         /* starting browse position (used by the dev preview) */
 }) {
   const wrapRef = useRef(null)
   const spriteScrollRef = useRef(null)
@@ -61,10 +81,12 @@ export default function SpinSlot({
   const RIGHT_H = Math.max(30, Math.floor(containerH / 10))
 
   const [mode, setMode] = useState('browse')
-  const [browseIdx, setBrowseIdx] = useState(0)
+  const [browseIdx, setBrowseIdx] = useState(initialIndex)
   const [spinSeq, setSpinSeq] = useState([])
   const [spinFloat, setSpinFloat] = useState(0)
   const [winner, setWinner] = useState(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
 
   useEffect(() => {
     const el = wrapRef.current
@@ -94,20 +116,20 @@ export default function SpinSlot({
   }, [])
 
   useEffect(() => {
-    if (pool.length === 0) { setBrowseIdx(0); return }
-    setBrowseIdx(i => Math.min(i, pool.length - 1))
-  }, [pool.length])
+    if (entries.length === 0) { setBrowseIdx(0); return }
+    setBrowseIdx(i => Math.min(i, entries.length - 1))
+  }, [entries.length])
 
   useEffect(() => {
     const el = wrapRef.current; if (!el) return
     const fn = e => {
       if (mode !== 'browse') return
       e.preventDefault()
-      setBrowseIdx(i => Math.max(0, Math.min(pool.length - 1, i + Math.sign(e.deltaY))))
+      setBrowseIdx(i => Math.max(0, Math.min(entries.length - 1, i + Math.sign(e.deltaY))))
     }
     el.addEventListener('wheel', fn, { passive: false })
     return () => el.removeEventListener('wheel', fn)
-  }, [mode, pool.length])
+  }, [mode, entries.length])
 
   const touchLastY = useRef(0)
   useEffect(() => {
@@ -119,12 +141,12 @@ export default function SpinSlot({
       const dy = touchLastY.current - e.touches[0].clientY
       touchLastY.current = e.touches[0].clientY
       if (Math.abs(dy) > RIGHT_H / 2)
-        setBrowseIdx(i => Math.max(0, Math.min(pool.length - 1, i + Math.sign(dy))))
+        setBrowseIdx(i => Math.max(0, Math.min(entries.length - 1, i + Math.sign(dy))))
     }
     el.addEventListener('touchstart', s, { passive: true })
     el.addEventListener('touchmove', m, { passive: false })
     return () => { el.removeEventListener('touchstart', s); el.removeEventListener('touchmove', m) }
-  }, [mode, pool.length, RIGHT_H])
+  }, [mode, entries.length, RIGHT_H])
 
   const spin = useCallback(() => {
     if (mode !== 'browse' || disabled || pool.length === 0) return
@@ -148,7 +170,7 @@ export default function SpinSlot({
   const confirmPick = async () => { if (!winner) return; setMode('browse'); setWinner(null); await onPick(winner) }
   const skipPick = () => { setMode('browse'); setWinner(null) }
 
-  const displayList = (mode === 'spin' || mode === 'confirm') ? spinSeq : pool
+  const displayList = (mode === 'spin' || mode === 'confirm') ? spinSeq : entries
   const floatIdx = mode === 'spin' ? spinFloat : mode === 'confirm' ? SPIN_COUNT : browseIdx
   const centreI = Math.round(floatIdx)
   const winStart = Math.max(0, centreI - HALF_WIN)
@@ -166,12 +188,6 @@ export default function SpinSlot({
     { key: 'both', label: 'BOTH' },
   ]
 
-  /* Fallback stat values when older callers haven't passed split counts */
-  const sH = seenHoenn ?? totalCount ?? pool.length
-  const sN = seenNational ?? totalCount ?? pool.length
-  const oH = ownHoenn ?? pickedCount ?? 0
-  const oN = ownNational ?? pickedCount ?? 0
-
   return (
     <div ref={wrapRef} className="flex-1 flex flex-col min-h-0 select-none relative"
       style={{
@@ -183,86 +199,101 @@ export default function SpinSlot({
               inset -3px -3px 0 ${C_FRAME_PINK_LO}`,
       }}>
 
-      {/* ── Header ─────────────────────────────────────────────────── */}
-      <div className="flex-shrink-0 flex items-center justify-between px-3 py-2 relative"
-        style={{
-          background: C_HEADER_GREEN,
-          borderBottom: `4px solid ${C_BORDER}`,
-          boxShadow: `inset 0 2px 0 ${C_HEADER_GREEN2}, inset 0 -2px 0 #000`,
-        }}>
-
-        {/* Save-floppy + POKEDEX title cluster (left) */}
-        <div className="flex items-center gap-2">
-          <FloppyIcon />
-          <span className="font-pixel text-white tracking-widest" style={{ fontSize: 13, letterSpacing: 3 }}>
-            POKeDEX
-          </span>
-          {/* Pink up-triangle scroll indicator next to the title */}
-          <span style={{
-            display: 'inline-block', width: 0, height: 0,
-            borderLeft: '6px solid transparent', borderRight: '6px solid transparent',
-            borderBottom: `8px solid ${C_FRAME_PINK_HI}`, marginLeft: 4
-          }} />
-        </div>
-
-        {/* Category toggles — small pixelated pills */}
-        <div className="flex gap-1">
-          {CATEGORIES.map(c => (
-            <button key={c.key} onClick={() => onCategoryChange?.(c.key)}
-              className="font-pixel"
-              style={{
-                fontSize: 7, padding: '2px 6px',
-                background: category === c.key ? C_FRAME_PINK_HI : '#0a200f',
-                color: category === c.key ? '#000' : '#8aaa8a',
-                border: `2px solid ${category === c.key ? '#000' : C_HEADER_GREEN2}`,
-                boxShadow: category === c.key ? '2px 2px 0 #000' : 'none'
-              }}>
-              {c.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button onClick={onShowPicks} className="font-pixel"
-            style={{
-              fontSize: 7, padding: '2px 6px', background: C_FRAME_PINK_HI, color: '#000',
-              border: '2px solid #000', boxShadow: '2px 2px 0 #000'
-            }}>
-            PICKS {oN > 0 && <span style={{ color: C_RED }}>{oN}</span>}
-          </button>
-          <button onClick={onSignOut} className="font-pixel"
-            style={{ fontSize: 7, color: '#a04040', padding: '2px 4px' }}>x</button>
-        </div>
-      </div>
-
-      {/* ── Two-panel body ──────────────────────────────────────────── */}
+      {/* ── Two-panel body (no header / footer — like the GBA screen) ── */}
       <div className="flex flex-1 min-h-0" style={{ overflow: 'hidden' }}>
 
-        {/* LEFT — stats column + sprite viewport */}
-        <div className="flex flex-shrink-0 relative" style={{ width: '42%', borderRight: `4px solid ${C_BORDER}` }}>
+        {/* LEFT — green scanline panel + dark pokeball silhouette (per image) */}
+        <div className="flex flex-shrink-0 relative"
+          style={{
+            width: '42%',
+            borderRight: `4px solid ${C_BORDER}`,
+            paddingTop: 52,
+            /* bright green horizontal scanlines, like the GBA backdrop */
+            background: `repeating-linear-gradient(to bottom,
+              #58a858 0px, #58a858 4px,
+              #3c7c3c 4px, #3c7c3c 8px)`,
+          }}>
 
-          {/* SEEN / OWN stats column — pink background, HOENN + NATIONAL split */}
-          <div className="flex flex-col justify-around items-stretch py-3 px-2 flex-shrink-0"
+          {/* Pokeball silhouette — square, solid dark-navy, offset to the left
+              so only its right side shows (band + button let the green through) */}
+          <div className="absolute inset-0 pointer-events-none" style={{ overflow: 'hidden', zIndex: 0 }}>
+            <img src={pokeballSil} alt=""
+              style={{
+                position: 'absolute', left: '4%', top: '54%',
+                transform: 'translate(-50%, -50%)',
+                height: '78%', aspectRatio: '1 / 1', width: 'auto',
+                imageRendering: 'pixelated',
+              }} />
+          </div>
+
+          {/* POKEDEX logo — thick black text on a pixel-rounded white pill */}
+          <div className="absolute z-20" style={{ top: 10, left: '50%', transform: 'translateX(-50%)' }}>
+            <span className="font-pixel" style={{
+              display: 'inline-block', fontSize: 30, fontWeight: 'bold', lineHeight: 1,
+              color: '#101010', background: '#f8f8f8',
+              padding: '6px 22px 8px', letterSpacing: 3,
+              clipPath: pixelRound(4), whiteSpace: 'nowrap',
+              textShadow: '2px 0 0 #101010',
+            }}>
+              POKéDEX
+            </span>
+          </div>
+
+          {/* SEEN / OWN stats column (wider, like the image) with the
+              START MENU / SELECT SEARCH cluster pinned at the bottom */}
+          <div className="flex flex-col flex-shrink-0 relative"
             style={{
-              width: 96,
-              background: C_FRAME_PINK,
-              borderRight: `3px solid ${C_BORDER}`,
-              boxShadow: `inset 2px 0 0 ${C_FRAME_PINK_HI}, inset -2px 0 0 ${C_FRAME_PINK_LO}`,
+              width: 148,
+              zIndex: 1,
+              padding: '20px 8px 14px',
             }}>
 
-            {/* SEEN block */}
-            <StatBlock label="SEEN" rows={[['HOENN', sH], ['NATIONAL', sN]]} />
-
-            {/* Separator pixel */}
-            <div style={{ height: 6, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              <div style={{
-                width: '70%', height: 2, background: C_FRAME_PINK_LO,
-                boxShadow: `0 2px 0 ${C_FRAME_PINK_HI}`
-              }} />
+            {/* stats — justified between vertically, with POKeMON / TRAINER /
+                BOTH rows under each heading (like HOENN / NATIONAL in the image) */}
+            <div className="flex flex-col justify-between min-h-0"
+              style={{ height: '58%', padding: '4px 0' }}>
+              <StatBlock label="SEEN" rows={[
+                ['POKéMON', seenStats.pokemon],
+                ['TRAINER', seenStats.trainers],
+                ['BOTH', seenStats.both],
+              ]} />
+              <StatBlock label="OWN" rows={[
+                ['POKéMON', ownStats.pokemon],
+                ['TRAINER', ownStats.trainers],
+                ['BOTH', ownStats.both],
+              ]} />
             </div>
 
-            {/* OWN block */}
-            <StatBlock label="OWN" rows={[['HOENN', oH], ['NATIONAL', oN]]} />
+            {/* spacer pushes MENU / SEARCH to the bottom */}
+            <div className="flex-1" />
+
+            {/* START● MENU — opens the menu dialog */}
+            <button onClick={() => setMenuOpen(true)}
+              className="flex items-center font-pixel active:scale-95 transition-transform"
+              style={{
+                gap: 8, background: 'transparent', border: 'none',
+                padding: '4px 0', cursor: 'pointer',
+              }}>
+              <ConsoleTag text="START" />
+              <span style={{
+                fontSize: 19, lineHeight: 1, color: '#f8f8f8',
+                textShadow: STAT_OUTLINE,
+              }}>MENU</span>
+            </button>
+
+            {/* SELECT● SEARCH — opens the search dialog */}
+            <button onClick={() => setSearchOpen(true)}
+              className="flex items-center font-pixel active:scale-95 transition-transform"
+              style={{
+                gap: 8, background: 'transparent', border: 'none',
+                padding: '4px 0', cursor: 'pointer', marginTop: 8,
+              }}>
+              <ConsoleTag text="SELECT" />
+              <span style={{
+                fontSize: 19, lineHeight: 1, color: '#f8f8f8',
+                textShadow: STAT_OUTLINE,
+              }}>SEARCH</span>
+            </button>
           </div>
 
           {/* Sprite viewport — white screen w/ pink double border */}
@@ -274,7 +305,7 @@ export default function SpinSlot({
               boxShadow:
                 `inset 4px 4px 0 rgba(0,0,0,0.18),
                     inset -2px -2px 0 rgba(255,255,255,0.4),
-                    0 0 0 3px ${C_FRAME_PINK_HI}`,
+                    0 0 0 3px #9aa49a`,
             }}>
 
             {/* Centre selection bar */}
@@ -283,11 +314,11 @@ export default function SpinSlot({
                 top: spriteH / 2 - LEFT_H / 2, height: LEFT_H
               }} />
 
-            {/* Sprite track */}
+            {/* Sprite track — non-centred sprites squash like a 3D wheel */}
             <div style={{ transform: `translateY(${leftY}px)`, willChange: 'transform' }}>
               {items.map((entry, i) => (
                 <SpriteCell key={`${entry.id}-${i}`} entry={entry} h={LEFT_H}
-                  highlighted={winStart + i === centreI} />
+                  dist={Math.abs(winStart + i - floatIdx)} />
               ))}
             </div>
 
@@ -296,6 +327,23 @@ export default function SpinSlot({
               style={{ height: 72, background: FADE_TOP_GREY }} />
             <div className="absolute inset-x-0 bottom-0 pointer-events-none z-20"
               style={{ height: 72, background: FADE_BOT_GREY }} />
+
+            {/* SPIN button — floats over the bottom of the sprite screen */}
+            <button onClick={spin}
+              disabled={mode !== 'browse' || disabled || pool.length === 0}
+              className="absolute z-30 font-pixel active:scale-95 transition-transform"
+              style={{
+                bottom: 10, left: '50%', transform: 'translateX(-50%)',
+                fontSize: 13, padding: '6px 26px',
+                background: mode !== 'browse' || disabled || pool.length === 0 ? '#0a200f' : C_RED,
+                color: mode !== 'browse' || disabled || pool.length === 0 ? '#3a5a3a' : '#fff',
+                border: `3px solid ${mode !== 'browse' || disabled || pool.length === 0 ? '#000' : '#880000'}`,
+                boxShadow: mode !== 'browse' || disabled || pool.length === 0 ? 'none' : '3px 3px 0 #000',
+                cursor: mode !== 'browse' || disabled || pool.length === 0 ? 'not-allowed' : 'pointer',
+                letterSpacing: 2,
+              }}>
+              {mode === 'spin' ? '...' : pool.length === 0 ? 'DONE!' : '> SPIN'}
+            </button>
           </div>
 
           {/* Right-pointing triangle — sits OUTSIDE the sprite viewport (in the
@@ -314,109 +362,95 @@ export default function SpinSlot({
             }} />
         </div>
 
-        {/* RIGHT — cream name list */}
-        <div ref={namesScrollRef} className="flex-1 relative" style={{ background: C_LIST_CREAM, overflow: 'hidden' }}>
+        {/* RIGHT — name list column with big pink arrows above + below */}
+        <div className="flex-1 flex flex-col min-h-0">
 
-          <div style={{
-            transform: `translateY(${rightY}px)`, willChange: 'transform',
-            paddingRight: 22,
-          }}>
-            {items.map((entry, i) => {
-              const absI = winStart + i
-              return (
-                <NameCell key={`${entry.id}-${i}`} entry={entry} h={RIGHT_H}
-                  highlighted={absI === centreI}
-                  isPicked={pickedIds?.has(entry.id)} />
-              )
-            })}
+          {/* big pink UP arrow strip (replaces the old header) */}
+          <div className="flex-shrink-0 flex items-center justify-center"
+            style={{ height: 30, background: '#08120a' }}>
+            <div style={{
+              width: 0, height: 0,
+              borderLeft: '19px solid transparent', borderRight: '19px solid transparent',
+              borderBottom: '20px solid #f060a8',
+            }} />
           </div>
 
-          {/* No fade on the names list — entries cut cleanly at top/bottom (matches image) */}
+          {/* golden yellow name scroller */}
+          <div ref={namesScrollRef} className="flex-1 relative" style={{ background: C_LIST_CREAM, overflow: 'hidden' }}>
 
-          {/* Up-arrow scroll indicator (top-right, pink) */}
-          <div className="absolute z-30 pointer-events-none"
-            style={{
-              top: 4, right: 24, width: 0, height: 0,
-              borderLeft: '6px solid transparent', borderRight: '6px solid transparent',
-              borderBottom: `9px solid ${C_FRAME_PINK}`
-            }} />
-          {/* Down-arrow scroll indicator (bottom-right, pink) */}
-          <div className="absolute z-30 pointer-events-none"
-            style={{
-              bottom: 4, right: 24, width: 0, height: 0,
-              borderLeft: '6px solid transparent', borderRight: '6px solid transparent',
-              borderTop: `9px solid ${C_FRAME_PINK}`
-            }} />
-
-          {/* Scrollbar — golden yellow track blending with list + pink thumb */}
-          <div className="absolute right-0 top-0 bottom-0 z-20"
-            style={{
-              width: 16,
-              borderLeft: `2px solid ${C_LIST_CREAM_D}`,
-              background: C_LIST_CREAM
+            <div style={{
+              transform: `translateY(${rightY}px)`, willChange: 'transform',
+              paddingRight: 22,
             }}>
-            {/* Vertical track guide line down the middle */}
+              {items.map((entry, i) => {
+                const absI = winStart + i
+                return (
+                  <NameCell key={`${entry.id}-${i}`} entry={entry} h={RIGHT_H}
+                    highlighted={absI === centreI}
+                    isPicked={pickedIds?.has(entry.id)} />
+                )
+              })}
+            </div>
+
+            {/* Scrollbar — golden yellow track blending with list + pink thumb */}
+            <div className="absolute right-0 top-0 bottom-0 z-20"
+              style={{
+                width: 16,
+                borderLeft: `2px solid ${C_LIST_CREAM_D}`,
+                background: C_LIST_CREAM
+              }}>
+              {/* Vertical track guide line down the middle */}
+              <div style={{
+                position: 'absolute', top: 14, bottom: 14, left: '50%',
+                width: 2, marginLeft: -1, background: C_LIST_CREAM_D
+              }} />
+              {/* Square pink thumb (matches device frame) */}
+              <div style={{
+                position: 'absolute',
+                top: `calc(14px + ${scrollPct} * (100% - 38px))`,
+                left: 1, right: 1, height: 14,
+                background: C_FRAME_PINK,
+                border: `2px solid ${C_BORDER}`,
+                boxShadow: `inset 2px 2px 0 ${C_FRAME_PINK_HI}, inset -2px -2px 0 ${C_FRAME_PINK_LO}`,
+              }} />
+            </div>
+          </div>
+
+          {/* big pink DOWN arrow strip (replaces the old footer) */}
+          <div className="flex-shrink-0 flex items-center justify-center"
+            style={{ height: 30, background: '#08120a' }}>
             <div style={{
-              position: 'absolute', top: 14, bottom: 14, left: '50%',
-              width: 2, marginLeft: -1, background: C_LIST_CREAM_D
-            }} />
-            {/* Square pink thumb (matches device frame) */}
-            <div style={{
-              position: 'absolute',
-              top: `calc(14px + ${scrollPct} * (100% - 38px))`,
-              left: 1, right: 1, height: 14,
-              background: C_FRAME_PINK,
-              border: `2px solid ${C_BORDER}`,
-              boxShadow: `inset 2px 2px 0 ${C_FRAME_PINK_HI}, inset -2px -2px 0 ${C_FRAME_PINK_LO}`,
+              width: 0, height: 0,
+              borderLeft: '19px solid transparent', borderRight: '19px solid transparent',
+              borderTop: '20px solid #f060a8',
             }} />
           </div>
         </div>
       </div>
 
-      {/* ── Bottom bar (dark green, MENU + SEARCH) ─────────────────────── */}
-      <div className="flex-shrink-0 flex items-center justify-between px-3 relative"
-        style={{
-          background: C_HEADER_GREEN,
-          borderTop: `4px solid ${C_BORDER}`,
-          height: 46,
-          boxShadow: `inset 0 2px 0 ${C_HEADER_GREEN2}, inset 0 -2px 0 #000`,
-        }}>
+      {/* ── MENU dialog (START) — settings / picks / sign out ──────────── */}
+      {menuOpen && (
+        <GbaDialog title="MENU" onClose={() => setMenuOpen(false)}>
+          <DialogOption label="SETTINGS"
+            onClick={() => { setMenuOpen(false); onOpenSettings?.() }} />
+          <DialogOption label={`PICKS  ${ownStats.both}`}
+            onClick={() => { setMenuOpen(false); onShowPicks?.() }} />
+          <DialogOption label="SIGN OUT" danger
+            onClick={() => { setMenuOpen(false); onSignOut?.() }} />
+          <DialogOption label="CANCEL" onClick={() => setMenuOpen(false)} />
+        </GbaDialog>
+      )}
 
-        {/* START ● MENU — clickable, opens the settings overlay */}
-        <button onClick={onOpenSettings}
-          className="flex items-center gap-2 font-pixel active:scale-95 transition-transform"
-          style={{
-            fontSize: 9, color: '#fff', letterSpacing: 1,
-            background: 'transparent', border: 'none',
-            padding: '4px 6px', cursor: 'pointer',
-          }}>
-          <PixelDot color={C_RED} />
-          <span style={{ color: C_FRAME_PINK_HI }}>MENU</span>
-        </button>
-
-        {/* SPIN button (centre) */}
-        <button onClick={spin}
-          disabled={mode !== 'browse' || disabled || pool.length === 0}
-          className="font-pixel active:scale-95 transition-transform"
-          style={{
-            fontSize: 9, padding: '5px 22px',
-            background: mode !== 'browse' || disabled || pool.length === 0 ? '#0a200f' : C_RED,
-            color: mode !== 'browse' || disabled || pool.length === 0 ? '#3a5a3a' : '#fff',
-            border: `3px solid ${mode !== 'browse' || disabled || pool.length === 0 ? '#000' : '#880000'}`,
-            boxShadow: mode !== 'browse' || disabled || pool.length === 0 ? 'none' : '3px 3px 0 #000',
-            cursor: mode !== 'browse' || disabled || pool.length === 0 ? 'not-allowed' : 'pointer',
-            letterSpacing: 2,
-          }}>
-          {mode === 'spin' ? '...' : pool.length === 0 ? 'DONE!' : '> SPIN'}
-        </button>
-
-        {/* SELECT ● SEARCH */}
-        <div className="flex items-center gap-2 font-pixel"
-          style={{ fontSize: 9, color: '#fff', letterSpacing: 1 }}>
-          <PixelDot color={C_YELLOW_HI} />
-          <span style={{ color: C_YELLOW_HI }}>SEARCH</span>
-        </div>
-      </div>
+      {/* ── SEARCH dialog (SELECT) — category filter ────────────────────── */}
+      {searchOpen && (
+        <GbaDialog title="SEARCH" onClose={() => setSearchOpen(false)}>
+          {CATEGORIES.map(c => (
+            <DialogOption key={c.key} label={c.label} selected={category === c.key}
+              onClick={() => { onCategoryChange?.(c.key); setSearchOpen(false) }} />
+          ))}
+          <DialogOption label="CANCEL" onClick={() => setSearchOpen(false)} />
+        </GbaDialog>
+      )}
 
       {/* ── Winner overlay ──────────────────────────────────────────── */}
       {mode === 'confirm' && winner && (
@@ -482,33 +516,43 @@ export default function SpinSlot({
   )
 }
 
-/* ── StatBlock (SEEN / OWN with HOENN + NATIONAL) ──────────────────────── */
+/* ── StatBlock — label, WHITE underline, then value (exactly as the image) ── */
+const STAT_OUTLINE = `2px 0 0 #181830, -2px 0 0 #181830,
+                      0 2px 0 #181830, 0 -2px 0 #181830,
+                      2px 2px 0 #181830`
 function StatBlock({ label, rows }) {
   return (
-    <div className="flex flex-col items-stretch" style={{ gap: 2 }}>
+    <div className="flex flex-col" style={{ gap: 7 }}>
       <p className="font-pixel text-center"
         style={{
-          fontSize: 8, color: '#fff', letterSpacing: 2,
-          textShadow: `1px 1px 0 ${'#982050'}`
+          fontSize: 19, color: '#f8f8f8', letterSpacing: 1,
+          lineHeight: 1,
+          textShadow: STAT_OUTLINE,
         }}>
         {label}
       </p>
-      {rows.map(([region, n]) => (
-        <div key={region} className="flex items-baseline justify-between"
-          style={{ paddingLeft: 2, paddingRight: 2 }}>
+      {/* white underline beneath the heading — full column width */}
+      <div style={{
+        width: '100%', height: 3, background: '#f8f8f8',
+        boxShadow: '0 2px 0 rgba(0,0,0,0.55)',
+      }} />
+      {/* rows — small label left, larger value right (like HOENN 185) */}
+      {rows.map(([name, v]) => (
+        <div key={name} className="flex items-baseline justify-between"
+          style={{ padding: '2px 2px 0' }}>
           <span className="font-pixel"
             style={{
-              fontSize: 6, color: '#fff', letterSpacing: 1,
-              textShadow: `1px 1px 0 ${'#982050'}`
+              fontSize: 11, color: '#f8f8f8', letterSpacing: 0.5,
+              lineHeight: 1, textShadow: STAT_OUTLINE,
             }}>
-            {region}
+            {name}
           </span>
           <span className="font-pixel"
             style={{
-              fontSize: 10, color: '#fff',
-              textShadow: `1px 1px 0 ${'#982050'}`
+              fontSize: 17, color: '#f8f8f8', lineHeight: 1,
+              textShadow: STAT_OUTLINE,
             }}>
-            {String(n).padStart(3, '0')}
+            {v}
           </span>
         </div>
       ))}
@@ -531,39 +575,99 @@ function FloppyIcon({ size = 14 }) {
   )
 }
 
-/* ── PixelDot (for MENU / SEARCH button indicators) ────────────────────── */
-function PixelDot({ color }) {
+/* ── GbaDialog — small centred Emerald-style menu box ──────────────────── */
+function GbaDialog({ title, onClose, children }) {
   return (
-    <span style={{
-      width: 12, height: 12, display: 'inline-block',
-      background: color, border: '2px solid #000',
-      boxShadow: `inset 2px 2px 0 rgba(255,255,255,0.55), inset -1px -1px 0 rgba(0,0,0,0.4)`,
-    }} />
+    <div className="absolute inset-0 z-50 flex items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.55)' }}
+      onClick={onClose}>
+      <div onClick={e => e.stopPropagation()}
+        style={{
+          minWidth: 230,
+          background: C_FRAME_PINK,
+          border: `4px solid ${C_BORDER}`,
+          boxShadow:
+            `4px 4px 0 rgba(0,0,0,0.75),
+             inset 3px 3px 0 ${C_FRAME_PINK_HI},
+             inset -3px -3px 0 ${C_FRAME_PINK_LO}`,
+          padding: 8,
+        }}>
+        <p className="font-pixel text-center"
+          style={{
+            fontSize: 13, color: '#fff', letterSpacing: 3,
+            marginBottom: 8, textShadow: '2px 2px 0 #000',
+          }}>
+          {title}
+        </p>
+        <div style={{
+          background: '#f8f8f8', border: `3px solid ${C_BORDER}`,
+          padding: '6px 4px', display: 'flex', flexDirection: 'column', gap: 2,
+        }}>
+          {children}
+        </div>
+      </div>
+    </div>
   )
 }
 
-/* ── Pokeball icon (red, pixelated, as in the Pokedex image) ───────────── */
-function PokeballIcon({ size = 12 }) {
+/* ── DialogOption — one row in a GbaDialog ─────────────────────────────── */
+function DialogOption({ label, onClick, selected, danger }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 10 10"
-      style={{ imageRendering: 'pixelated', flexShrink: 0, display: 'block' }}>
-      <rect x="0" y="0" width="10" height="10" fill="#111" />
-      <rect x="1" y="1" width="8" height="3" fill="#CC0000" />
-      <rect x="1" y="6" width="8" height="3" fill="#eee" />
-      <rect x="1" y="4" width="8" height="2" fill="#111" />
-      <rect x="3" y="4" width="4" height="2" fill="#fff" />
-      <rect x="4" y="4" width="2" height="2" fill="#ccc" />
-    </svg>
+    <button onClick={onClick}
+      className="font-pixel text-left active:scale-95 transition-transform"
+      style={{
+        fontSize: 12, lineHeight: 1, padding: '7px 10px',
+        background: selected ? '#f0f33a' : 'transparent',
+        color: danger ? '#a02020' : '#3a3a3a',
+        border: 'none', cursor: 'pointer',
+        textShadow: '1px 1px 0 #d0d0d0',
+        letterSpacing: 1,
+      }}>
+      {selected ? '▶ ' : '   '}{label}
+    </button>
   )
 }
 
-/* ── SpriteCell ────────────────────────────────────────────────────────── */
-function SpriteCell({ entry, h, highlighted }) {
+/* ── ConsoleTag — pink START / SELECT lozenge with the black button dot
+      inside its right end (exactly as the image) ──────────────────────── */
+function ConsoleTag({ text }) {
+  return (
+    <span className="font-pixel" style={{
+      display: 'inline-flex', alignItems: 'center', gap: 7,
+      background: '#e860a8',
+      padding: '3px 6px 4px 11px', borderRadius: 11,
+      border: '2px solid #882050',
+      boxShadow: 'inset 0 2px 0 #f8a0c8',
+      textShadow: 'none',
+    }}>
+      <span style={{
+        fontSize: 12, lineHeight: 1, color: '#3a1030', letterSpacing: 1,
+      }}>
+        {text}
+      </span>
+      <span style={{
+        width: 12, height: 12, borderRadius: '50%', flexShrink: 0,
+        background: '#101018', border: '2px solid #000',
+        boxShadow: 'inset 1px 2px 0 rgba(255,255,255,0.35)',
+      }} />
+    </span>
+  )
+}
+
+/* ── SpriteCell — squashes as it leaves centre, like a 3D scroll wheel ─── */
+function SpriteCell({ entry, h, dist }) {
   const [ok, setOk] = useState(true)
   const size = Math.floor(h * 0.82)
+  const d = Math.min(1, dist)
+  const squash = `scale(${1 - 0.12 * d}, ${1 - 0.45 * d})`
   return (
     <div className="flex items-center justify-center"
-      style={{ height: h, opacity: highlighted ? 1 : 0.18, transition: 'opacity 0.08s' }}>
+      style={{
+        height: h,
+        opacity: 1 - 0.82 * d,
+        transform: squash,
+        transition: 'opacity 0.08s, transform 0.08s',
+      }}>
       {ok ? (
         <img src={entry.sprite} alt={entry.name}
           style={{ width: size, height: size, imageRendering: 'pixelated', objectFit: 'contain' }}
@@ -575,7 +679,7 @@ function SpriteCell({ entry, h, highlighted }) {
   )
 }
 
-/* ── NameCell — pokeball, number, name (cream rows, yellow highlight) ──── */
+/* ── NameCell — pokeball (owned only), number, name ────────────────────── */
 function NameCell({ entry, h, highlighted, isPicked }) {
   const fs = Math.max(16, Math.floor(h * 0.52))
   const nfs = Math.max(16, Math.floor(h * 0.52))
@@ -602,9 +706,13 @@ function NameCell({ entry, h, highlighted, isPicked }) {
           }} />
       )}
 
-      {/* Red pokeball — shown for every visible row (matches image) */}
-      <span style={{ position: 'relative', zIndex: 1, display: 'flex' }}>
-        <PokeballIcon size={nfs + 4} />
+      {/* Pokeball gutter — SVG ball shown ONLY when this entry is owned.
+          The gutter keeps its width either way so numbers stay aligned. */}
+      <span style={{
+        position: 'relative', zIndex: 1, display: 'flex',
+        width: nfs + 4, justifyContent: 'center', flexShrink: 0,
+      }}>
+        {isPicked && <PokeballIcon size={nfs + 2} />}
       </span>
 
       {/* Number */}
@@ -632,16 +740,6 @@ function NameCell({ entry, h, highlighted, isPicked }) {
         }}>
         {entry.name.toUpperCase()}
       </span>
-
-      {/* Picked-state marker (small dark dot at right edge) */}
-      {isPicked && !highlighted && (
-        <span style={{
-          position: 'absolute', right: 10, top: '50%',
-          transform: 'translateY(-50%)',
-          width: 6, height: 6, background: C_FRAME_PINK_LO,
-          border: '1px solid #000'
-        }} />
-      )}
     </div>
   )
 }

@@ -46,10 +46,11 @@ export default function MainPage() {
 
   const pool = useMemo(() => allEntries.filter(e => !pickedIds.has(e.id)), [allEntries, pickedIds])
 
-  const seenHoenn = pokemonList.length
-  const seenNational = pokemonList.length + TRAINERS_DEDUPED.length
-  const ownHoenn = picks.filter(p => p.entry_type === 'pokemon').length
-  const ownNational = picks.length
+  /* SEEN = everything in the current category, OWN = picks in that category */
+  const seenCount = allEntries.length
+  const ownCount = category === 'both'
+    ? picks.length
+    : picks.filter(p => p.entry_type === category).length
 
   const handlePick = async entry => { await addPick(entry) }
 
@@ -85,17 +86,14 @@ export default function MainPage() {
             </div>
           ) : (
             <SpinSlot
+              entries={allEntries}
               pool={pool}
               onPick={handlePick}
               disabled={picksLoading}
               category={category}
               onCategoryChange={setCategory}
-              pickedCount={picks.length}
-              totalCount={allEntries.length}
-              seenHoenn={seenHoenn}
-              seenNational={seenNational}
-              ownHoenn={ownHoenn}
-              ownNational={ownNational}
+              seenCount={seenCount}
+              ownCount={ownCount}
               pickedIds={pickedIds}
               onSignOut={signOut}
               onShowPicks={() => setSidebarOpen(o => !o)}
