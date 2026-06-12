@@ -46,11 +46,17 @@ export default function MainPage() {
 
   const pool = useMemo(() => allEntries.filter(e => !pickedIds.has(e.id)), [allEntries, pickedIds])
 
-  /* SEEN = everything in the current category, OWN = picks in that category */
-  const seenCount = allEntries.length
-  const ownCount = category === 'both'
-    ? picks.length
-    : picks.filter(p => p.entry_type === category).length
+  /* SEEN / OWN split by type (POKeMON / TRAINER / BOTH rows in the dex) */
+  const seenStats = {
+    pokemon: pokemonList.length,
+    trainers: TRAINERS_DEDUPED.length,
+    both: pokemonList.length + TRAINERS_DEDUPED.length,
+  }
+  const ownStats = {
+    pokemon: picks.filter(p => p.entry_type === 'pokemon').length,
+    trainers: picks.filter(p => p.entry_type === 'trainer').length,
+    both: picks.length,
+  }
 
   const handlePick = async entry => { await addPick(entry) }
 
@@ -59,7 +65,7 @@ export default function MainPage() {
     <div className="min-h-screen flex items-center justify-center p-4 md:p-8">
 
       {/* Centered max-width container */}
-      <div className="w-full max-w-7xl flex gap-0 relative"
+      <div className="w-full max-w-[1640px] flex gap-0 relative"
         style={{ height: 'calc(100vh - 2rem)', maxHeight: 860 }}>
 
         {/* Main slot */}
@@ -92,8 +98,8 @@ export default function MainPage() {
               disabled={picksLoading}
               category={category}
               onCategoryChange={setCategory}
-              seenCount={seenCount}
-              ownCount={ownCount}
+              seenStats={seenStats}
+              ownStats={ownStats}
               pickedIds={pickedIds}
               onSignOut={signOut}
               onShowPicks={() => setSidebarOpen(o => !o)}

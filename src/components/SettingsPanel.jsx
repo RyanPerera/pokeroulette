@@ -52,12 +52,12 @@ export default function SettingsPanel({
             boxShadow: `inset 0 2px 0 ${C_HEADER_GREEN2}, inset 0 -2px 0 #000`,
           }}>
           <span className="font-pixel"
-            style={{ fontSize: 13, color: '#fff', letterSpacing: 3 }}>
+            style={{ fontSize: 18, color: '#fff', letterSpacing: 3 }}>
             SETTINGS
           </span>
           <button onClick={onClose} className="font-pixel"
             style={{
-              fontSize: 9, padding: '2px 8px',
+              fontSize: 14, padding: '4px 12px',
               background: C_FRAME_PINK_HI, color: '#000',
               border: '2px solid #000', boxShadow: '2px 2px 0 #000',
             }}>
@@ -90,10 +90,10 @@ export default function SettingsPanel({
             height: 38,
             boxShadow: `inset 0 2px 0 ${C_HEADER_GREEN2}, inset 0 -2px 0 #000`,
           }}>
-          <span className="font-pixel" style={{ fontSize: 8, color: C_FRAME_PINK_HI }}>
+          <span className="font-pixel" style={{ fontSize: 13, color: C_FRAME_PINK_HI }}>
             ◄ BACK
           </span>
-          <span className="font-pixel" style={{ fontSize: 8, color: C_YELLOW_HI }}>
+          <span className="font-pixel" style={{ fontSize: 13, color: C_YELLOW_HI }}>
             SAVED
           </span>
         </div>
@@ -108,12 +108,11 @@ function SettingSlider({ label, valueLabel, min, max, step, value, onChange, tic
     <div className="flex flex-col" style={{ gap: 6 }}>
       <div className="flex items-baseline justify-between">
         <span className="font-pixel"
-          style={{ fontSize: 9, color: C_FRAME_PINK_LO, letterSpacing: 1 }}>
+          style={{ fontSize: 15, color: C_FRAME_PINK_LO, letterSpacing: 1, textShadow: 'none' }}>
           {label}
         </span>
         <span className="font-pixel"
-          style={{ fontSize: 11, color: '#2a1808',
-                   textShadow: `1px 1px 0 ${C_FRAME_PINK_HI}` }}>
+          style={{ fontSize: 18, color: '#1a1208', textShadow: 'none' }}>
           {valueLabel}
         </span>
       </div>
@@ -128,7 +127,7 @@ function SettingSlider({ label, valueLabel, min, max, step, value, onChange, tic
         }} />
 
       <div className="flex justify-between font-pixel"
-        style={{ fontSize: 7, color: '#5a3818' }}>
+        style={{ fontSize: 12, color: '#4a3210', textShadow: 'none' }}>
         <span>{tickLeft}</span>
         <span>{tickRight}</span>
       </div>

@@ -37,7 +37,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       {/* Pokedex device */}
-      <div className="w-full max-w-sm"
+      <div className="w-full max-w-md"
            style={{
              background: C_FRAME_PINK,
              border: '4px solid #000',
@@ -72,15 +72,15 @@ export default function LoginPage() {
              }}>
 
           <h1 className="font-pixel text-center"
-              style={{ fontSize: 14, color: C_FRAME_PINK_LO,
+              style={{ fontSize: 20, color: C_FRAME_PINK_LO,
                        textShadow: `2px 2px 0 ${C_YELLOW_HI}`,
-                       letterSpacing: 3, marginBottom: 2 }}>
+                       letterSpacing: 3, marginBottom: 4 }}>
             POKeMON
           </h1>
           <h2 className="font-pixel text-center"
-              style={{ fontSize: 18, color: C_FRAME_PINK,
+              style={{ fontSize: 28, color: C_FRAME_PINK,
                        textShadow: '2px 2px 0 #982050',
-                       letterSpacing: 4, marginBottom: 14 }}>
+                       letterSpacing: 4, marginBottom: 16 }}>
             ROULETTE
           </h2>
 
@@ -92,7 +92,7 @@ export default function LoginPage() {
                 onClick={() => { setMode(m); setError(''); setMessage('') }}
                 className="flex-1 font-pixel"
                 style={{
-                  fontSize: 8, padding: '6px 0',
+                  fontSize: 14, padding: '8px 0',
                   background: mode === m ? C_FRAME_PINK : '#fff4d0',
                   color:      mode === m ? '#fff' : C_FRAME_PINK_LO,
                   border: '2px solid #000',
@@ -108,7 +108,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
               <label className="font-pixel block mb-1"
-                     style={{ fontSize: 7, color: C_FRAME_PINK_LO, letterSpacing: 1 }}>EMAIL</label>
+                     style={{ fontSize: 13, color: C_FRAME_PINK_LO, letterSpacing: 1, textShadow: 'none' }}>EMAIL</label>
               <input
                 type="email"
                 value={email}
@@ -117,18 +117,18 @@ export default function LoginPage() {
                 className="w-full font-pixel focus:outline-none"
                 style={{
                   background: '#fff',
-                  border: '2px solid #000',
-                  color: '#3a2a10',
-                  fontSize: 8,
-                  padding: '6px 8px',
-                  boxShadow: `inset 2px 2px 0 ${C_LIST_CREAM}`,
+                  border: '3px solid #000',
+                  color: '#1a1208',
+                  fontSize: 17,
+                  padding: '10px 12px',
+                  textShadow: 'none',
                 }}
                 placeholder="trainer@email.com"
               />
             </div>
             <div>
               <label className="font-pixel block mb-1"
-                     style={{ fontSize: 7, color: C_FRAME_PINK_LO, letterSpacing: 1 }}>PASSWORD</label>
+                     style={{ fontSize: 13, color: C_FRAME_PINK_LO, letterSpacing: 1, textShadow: 'none' }}>PASSWORD</label>
               <input
                 type="password"
                 value={password}
@@ -138,11 +138,11 @@ export default function LoginPage() {
                 className="w-full font-pixel focus:outline-none"
                 style={{
                   background: '#fff',
-                  border: '2px solid #000',
-                  color: '#3a2a10',
-                  fontSize: 8,
-                  padding: '6px 8px',
-                  boxShadow: `inset 2px 2px 0 ${C_LIST_CREAM}`,
+                  border: '3px solid #000',
+                  color: '#1a1208',
+                  fontSize: 17,
+                  padding: '10px 12px',
+                  textShadow: 'none',
                 }}
                 placeholder="••••••••"
               />
@@ -150,11 +150,11 @@ export default function LoginPage() {
 
             {error && (
               <p className="font-pixel text-center"
-                 style={{ fontSize: 7, color: C_RED, lineHeight: 1.8 }}>{error}</p>
+                 style={{ fontSize: 13, color: C_RED, lineHeight: 1.6, textShadow: 'none' }}>{error}</p>
             )}
             {message && (
               <p className="font-pixel text-center"
-                 style={{ fontSize: 7, color: C_HEADER_GREEN, lineHeight: 1.8 }}>{message}</p>
+                 style={{ fontSize: 13, color: C_HEADER_GREEN, lineHeight: 1.6, textShadow: 'none' }}>{message}</p>
             )}
 
             <button
@@ -162,8 +162,8 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full font-pixel active:scale-95 transition-transform"
               style={{
-                fontSize: 10,
-                padding: '8px 0',
+                fontSize: 17,
+                padding: '10px 0',
                 background: loading ? '#888' : C_RED,
                 color: '#fff',
                 border: '3px solid #000',

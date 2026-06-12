@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import SpinSlot from './components/SpinSlot'
 import PickedList from './components/PickedList'
+import SettingsPanel from './components/SettingsPanel'
 import './index.css'
 
 /* Font path fix for file:// preview — same family, relative URL wins */
@@ -53,9 +54,11 @@ const mockPicks = [...pickedIds].map((id, i) => {
 
 function Preview() {
   const [category, setCategory] = useState('pokemon')
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [spinMs, setSpinMs] = useState(4000)
   return (
     <div className="min-h-screen flex items-center justify-center p-4 md:p-8">
-      <div className="w-full max-w-7xl flex gap-0 relative"
+      <div className="w-full max-w-[1640px] flex gap-0 relative"
         style={{ height: 'calc(100vh - 2rem)', maxHeight: 860 }}>
         <main className="flex-1 flex min-h-0 relative">
           <SpinSlot
@@ -65,13 +68,13 @@ function Preview() {
             disabled={false}
             category={category}
             onCategoryChange={setCategory}
-            seenCount={80}
-            ownCount={20}
+            seenStats={{ pokemon: 185, trainers: 23, both: 208 }}
+            ownStats={{ pokemon: 169, trainers: 16, both: 185 }}
             pickedIds={pickedIds}
             onSignOut={() => {}}
             onShowPicks={() => {}}
-            spinMs={4000}
-            onOpenSettings={() => {}}
+            spinMs={spinMs}
+            onOpenSettings={() => setSettingsOpen(true)}
             initialIndex={4}
           />
         </main>
@@ -85,6 +88,8 @@ function Preview() {
           <PickedList picks={mockPicks} onRemove={() => {}} onReset={() => {}} loadingPicks={false} />
         </aside>
       </div>
+      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)}
+        spinMs={spinMs} onSpinMsChange={setSpinMs} />
     </div>
   )
 }

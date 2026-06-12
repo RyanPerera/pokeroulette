@@ -191,27 +191,22 @@ export default function SpinSlot({
   return (
     <div ref={wrapRef} className="flex-1 flex flex-col min-h-0 select-none relative"
       style={{
-        background: C_FRAME_PINK,
+        /* the whole screen sits on the green striped backdrop — no pink frame */
+        background: `repeating-linear-gradient(to bottom,
+          #58a858 0px, #58a858 4px,
+          #3c7c3c 4px, #3c7c3c 8px)`,
         border: `4px solid ${C_BORDER}`,
-        boxShadow:
-          `4px 4px 0 rgba(0,0,0,0.75),
-              inset 3px 3px 0 ${C_FRAME_PINK_HI},
-              inset -3px -3px 0 ${C_FRAME_PINK_LO}`,
+        boxShadow: '4px 4px 0 rgba(0,0,0,0.75)',
       }}>
 
       {/* ── Two-panel body (no header / footer — like the GBA screen) ── */}
       <div className="flex flex-1 min-h-0" style={{ overflow: 'hidden' }}>
 
-        {/* LEFT — green scanline panel + dark pokeball silhouette (per image) */}
+        {/* LEFT — wider panel on the shared green stripes, no border of its own */}
         <div className="flex flex-shrink-0 relative"
           style={{
-            width: '42%',
-            borderRight: `4px solid ${C_BORDER}`,
-            paddingTop: 52,
-            /* bright green horizontal scanlines, like the GBA backdrop */
-            background: `repeating-linear-gradient(to bottom,
-              #58a858 0px, #58a858 4px,
-              #3c7c3c 4px, #3c7c3c 8px)`,
+            width: '57%',
+            paddingTop: 74,
           }}>
 
           {/* Pokeball silhouette — square, solid dark-navy, offset to the left
@@ -219,21 +214,35 @@ export default function SpinSlot({
           <div className="absolute inset-0 pointer-events-none" style={{ overflow: 'hidden', zIndex: 0 }}>
             <img src={pokeballSil} alt=""
               style={{
-                position: 'absolute', left: '4%', top: '54%',
-                transform: 'translate(-50%, -50%)',
-                height: '78%', aspectRatio: '1 / 1', width: 'auto',
+                position: 'absolute', left: '10%', top: '52%',
+                /* rotates with the dex position — clockwise scrolling down,
+                   counter-clockwise scrolling up (and spins on a roll) */
+                transform: `translate(-50%, -50%) rotate(${floatIdx * 5}deg)`,
+                transition: 'transform 0.18s ease-out',
+                /* the source png is square — set only height so the ball
+                   stays perfectly round. maxWidth:none beats Tailwind's
+                   img{max-width:100%} which was squishing it. */
+                height: '88%', width: 'auto', maxWidth: 'none',
                 imageRendering: 'pixelated',
               }} />
           </div>
 
-          {/* POKEDEX logo — thick black text on a pixel-rounded white pill */}
-          <div className="absolute z-20" style={{ top: 10, left: '50%', transform: 'translateX(-50%)' }}>
+          {/* POKEDEX logo — thick black text on a pixel-rounded white pill
+              spanning from the stats text's left edge to the sprite scroller's
+              right edge (like the GBA logotype in sampleimage) */}
+          <div className="absolute z-20 flex items-center justify-center"
+            style={{
+              top: 6, left: 14, right: 8, height: 56,
+              background: '#f8f8f8',
+              clipPath: pixelRound(5),
+              overflow: 'hidden',
+            }}>
             <span className="font-pixel" style={{
-              display: 'inline-block', fontSize: 30, fontWeight: 'bold', lineHeight: 1,
-              color: '#101010', background: '#f8f8f8',
-              padding: '6px 22px 8px', letterSpacing: 3,
-              clipPath: pixelRound(4), whiteSpace: 'nowrap',
-              textShadow: '2px 0 0 #101010',
+              display: 'inline-block', fontSize: 46, fontWeight: 'bold', lineHeight: 1,
+              color: '#101010', letterSpacing: 2,
+              transform: 'scaleX(2.1) scaleY(0.8)',
+              whiteSpace: 'nowrap',
+              textShadow: '3px 0 0 #101010',
             }}>
               POKéDEX
             </span>
@@ -243,9 +252,12 @@ export default function SpinSlot({
               START MENU / SELECT SEARCH cluster pinned at the bottom */}
           <div className="flex flex-col flex-shrink-0 relative"
             style={{
-              width: 148,
+              /* ~41% of the panel ≈ 23% of the whole screen, like the image —
+                 the sprite box gets the remainder instead of all the width */
+              width: '41%',
+              minWidth: 150,
               zIndex: 1,
-              padding: '20px 8px 14px',
+              padding: '20px 14px 14px',
             }}>
 
             {/* stats — justified between vertically, with POKeMON / TRAINER /
@@ -276,7 +288,7 @@ export default function SpinSlot({
               }}>
               <ConsoleTag text="START" />
               <span style={{
-                fontSize: 19, lineHeight: 1, color: '#f8f8f8',
+                fontSize: 30, lineHeight: 1, color: '#f8f8f8',
                 textShadow: STAT_OUTLINE,
               }}>MENU</span>
             </button>
@@ -290,22 +302,33 @@ export default function SpinSlot({
               }}>
               <ConsoleTag text="SELECT" />
               <span style={{
-                fontSize: 19, lineHeight: 1, color: '#f8f8f8',
+                fontSize: 30, lineHeight: 1, color: '#f8f8f8',
                 textShadow: STAT_OUTLINE,
               }}>SEARCH</span>
             </button>
           </div>
 
-          {/* Sprite viewport — white screen w/ pink double border */}
-          <div ref={spriteScrollRef} className="flex-1 relative"
+          {/* Sprite viewport — like the image: dark slate outline, thick
+              cream frame, all with pixel-stepped rounded corners */}
+          <div className="flex-1 relative"
             style={{
-              margin: 6,
+              margin: 8,
+              padding: 4,
+              background: '#3e4450',
+              clipPath: pixelRound(6),
+            }}>
+          <div style={{
+            width: '100%', height: '100%',
+            padding: 9,
+            background: '#f0ece2',
+            clipPath: pixelRound(5),
+          }}>
+          <div ref={spriteScrollRef} className="relative"
+            style={{
+              width: '100%', height: '100%',
               background: C_SCREEN_WHITE,
               overflow: 'hidden',
-              boxShadow:
-                `inset 4px 4px 0 rgba(0,0,0,0.18),
-                    inset -2px -2px 0 rgba(255,255,255,0.4),
-                    0 0 0 3px #9aa49a`,
+              clipPath: pixelRound(3),
             }}>
 
             {/* Centre selection bar */}
@@ -345,6 +368,8 @@ export default function SpinSlot({
               {mode === 'spin' ? '...' : pool.length === 0 ? 'DONE!' : '> SPIN'}
             </button>
           </div>
+          </div>
+          </div>
 
           {/* Right-pointing triangle — sits OUTSIDE the sprite viewport (in the
               LEFT panel) so the viewport's inset shadows + outer halo + overflow:hidden
@@ -362,21 +387,38 @@ export default function SpinSlot({
             }} />
         </div>
 
-        {/* RIGHT — name list column with big pink arrows above + below */}
-        <div className="flex-1 flex flex-col min-h-0">
+        {/* RIGHT — name list column with big pink arrows above + below.
+            The strips around the list are NOT black — the green striped
+            backdrop shows through; only the yellow list has a black border. */}
+        <div className="flex-1 flex flex-col min-h-0"
+          style={{
+            paddingRight: 12,
+            /* minWidth 0 lets the column shrink to its flex allocation even
+               when a long nowrap name is in the rendered window — without it
+               the list widens and pushes its scrollbar out of view */
+            minWidth: 0,
+          }}>
 
-          {/* big pink UP arrow strip (replaces the old header) */}
+          {/* big pink UP arrow — floats on the green stripes */}
           <div className="flex-shrink-0 flex items-center justify-center"
-            style={{ height: 30, background: '#08120a' }}>
+            style={{ height: 30 }}>
             <div style={{
               width: 0, height: 0,
               borderLeft: '19px solid transparent', borderRight: '19px solid transparent',
               borderBottom: '20px solid #f060a8',
+              filter: 'drop-shadow(0 2px 0 rgba(0,0,0,0.45))',
             }} />
           </div>
 
-          {/* golden yellow name scroller */}
-          <div ref={namesScrollRef} className="flex-1 relative" style={{ background: C_LIST_CREAM, overflow: 'hidden' }}>
+          {/* golden yellow name scroller — dark slate border with
+              pixel-stepped rounded corners (like the image) */}
+          <div ref={namesScrollRef} className="flex-1 relative"
+            style={{
+              background: C_LIST_CREAM,
+              overflow: 'hidden',
+              border: '5px solid #3e4450',
+              clipPath: pixelRound(4),
+            }}>
 
             <div style={{
               transform: `translateY(${rightY}px)`, willChange: 'transform',
@@ -392,37 +434,27 @@ export default function SpinSlot({
               })}
             </div>
 
-            {/* Scrollbar — golden yellow track blending with list + pink thumb */}
-            <div className="absolute right-0 top-0 bottom-0 z-20"
+            {/* Scrollbar — thin tan track line riding inside the yellow,
+                with a black thumb framed in tan (exactly like the image) */}
+            <div className="absolute top-0 bottom-0 z-20 pointer-events-none"
+              style={{ right: 12, width: 5, background: '#c8a050' }} />
+            <div className="absolute z-20 pointer-events-none"
               style={{
-                width: 16,
-                borderLeft: `2px solid ${C_LIST_CREAM_D}`,
-                background: C_LIST_CREAM
-              }}>
-              {/* Vertical track guide line down the middle */}
-              <div style={{
-                position: 'absolute', top: 14, bottom: 14, left: '50%',
-                width: 2, marginLeft: -1, background: C_LIST_CREAM_D
+                top: `calc(2px + ${scrollPct} * (100% - 36px))`,
+                right: 4, width: 21, height: 32,
+                background: '#000',
+                border: '4px solid #c8a050',
               }} />
-              {/* Square pink thumb (matches device frame) */}
-              <div style={{
-                position: 'absolute',
-                top: `calc(14px + ${scrollPct} * (100% - 38px))`,
-                left: 1, right: 1, height: 14,
-                background: C_FRAME_PINK,
-                border: `2px solid ${C_BORDER}`,
-                boxShadow: `inset 2px 2px 0 ${C_FRAME_PINK_HI}, inset -2px -2px 0 ${C_FRAME_PINK_LO}`,
-              }} />
-            </div>
           </div>
 
-          {/* big pink DOWN arrow strip (replaces the old footer) */}
+          {/* big pink DOWN arrow — floats on the green stripes */}
           <div className="flex-shrink-0 flex items-center justify-center"
-            style={{ height: 30, background: '#08120a' }}>
+            style={{ height: 30 }}>
             <div style={{
               width: 0, height: 0,
               borderLeft: '19px solid transparent', borderRight: '19px solid transparent',
               borderTop: '20px solid #f060a8',
+              filter: 'drop-shadow(0 2px 0 rgba(0,0,0,0.45))',
             }} />
           </div>
         </div>
@@ -522,10 +554,10 @@ const STAT_OUTLINE = `2px 0 0 #181830, -2px 0 0 #181830,
                       2px 2px 0 #181830`
 function StatBlock({ label, rows }) {
   return (
-    <div className="flex flex-col" style={{ gap: 7 }}>
+    <div className="flex flex-col" style={{ gap: 10 }}>
       <p className="font-pixel text-center"
         style={{
-          fontSize: 19, color: '#f8f8f8', letterSpacing: 1,
+          fontSize: 32, color: '#f8f8f8', letterSpacing: 1,
           lineHeight: 1,
           textShadow: STAT_OUTLINE,
         }}>
@@ -533,23 +565,23 @@ function StatBlock({ label, rows }) {
       </p>
       {/* white underline beneath the heading — full column width */}
       <div style={{
-        width: '100%', height: 3, background: '#f8f8f8',
-        boxShadow: '0 2px 0 rgba(0,0,0,0.55)',
+        width: '100%', height: 4, background: '#f8f8f8',
+        boxShadow: '0 3px 0 rgba(0,0,0,0.55)',
       }} />
       {/* rows — small label left, larger value right (like HOENN 185) */}
       {rows.map(([name, v]) => (
         <div key={name} className="flex items-baseline justify-between"
-          style={{ padding: '2px 2px 0' }}>
+          style={{ padding: '3px 2px 0' }}>
           <span className="font-pixel"
             style={{
-              fontSize: 11, color: '#f8f8f8', letterSpacing: 0.5,
+              fontSize: 20, color: '#f8f8f8', letterSpacing: 0.5,
               lineHeight: 1, textShadow: STAT_OUTLINE,
             }}>
             {name}
           </span>
           <span className="font-pixel"
             style={{
-              fontSize: 17, color: '#f8f8f8', lineHeight: 1,
+              fontSize: 28, color: '#f8f8f8', lineHeight: 1,
               textShadow: STAT_OUTLINE,
             }}>
             {v}
@@ -557,21 +589,6 @@ function StatBlock({ label, rows }) {
         </div>
       ))}
     </div>
-  )
-}
-
-/* ── Floppy/save icon (top-left of header) ─────────────────────────────── */
-function FloppyIcon({ size = 14 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 10 10"
-      style={{ imageRendering: 'pixelated', flexShrink: 0, display: 'block' }}>
-      <rect x="0" y="0" width="10" height="10" fill="#000" />
-      <rect x="1" y="1" width="8" height="8" fill="#d0d0d0" />
-      <rect x="2" y="2" width="6" height="3" fill="#404040" />
-      <rect x="3" y="3" width="2" height="2" fill="#d0d0d0" />
-      <rect x="2" y="6" width="6" height="3" fill="#909090" />
-      <rect x="3" y="7" width="4" height="1" fill="#000" />
-    </svg>
   )
 }
 
@@ -633,22 +650,20 @@ function DialogOption({ label, onClick, selected, danger }) {
 function ConsoleTag({ text }) {
   return (
     <span className="font-pixel" style={{
-      display: 'inline-flex', alignItems: 'center', gap: 7,
-      background: '#e860a8',
-      padding: '3px 6px 4px 11px', borderRadius: 11,
-      border: '2px solid #882050',
-      boxShadow: 'inset 0 2px 0 #f8a0c8',
+      display: 'inline-flex', alignItems: 'center', gap: 8,
+      background: '#f060a8',
+      padding: '4px 5px 4px 15px', borderRadius: 18,
+      border: '3px solid #101018',
       textShadow: 'none',
     }}>
       <span style={{
-        fontSize: 12, lineHeight: 1, color: '#3a1030', letterSpacing: 1,
+        fontSize: 20, lineHeight: 1, color: '#101018', letterSpacing: 1,
       }}>
         {text}
       </span>
       <span style={{
-        width: 12, height: 12, borderRadius: '50%', flexShrink: 0,
-        background: '#101018', border: '2px solid #000',
-        boxShadow: 'inset 1px 2px 0 rgba(255,255,255,0.35)',
+        width: 23, height: 23, borderRadius: '50%', flexShrink: 0,
+        background: '#101018',
       }} />
     </span>
   )
@@ -699,9 +714,10 @@ function NameCell({ entry, h, highlighted, isPicked }) {
       {highlighted && (
         <div className="absolute pointer-events-none"
           style={{
-            top: 4, bottom: 4, left: 32, right: 18,
+            top: 4, bottom: 4, left: 32, right: 26,
             background: '#fffbff',
-            borderRadius: '20px',
+            /* pixel-stepped rounded ends, like the image */
+            clipPath: pixelRound(6),
             zIndex: 0,
           }} />
       )}
